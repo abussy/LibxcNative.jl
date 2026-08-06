@@ -1,9 +1,9 @@
-using LibXC
+using LibxcNative
 using Test
 
 include("compare_references.jl")
 
-@testset verbose=true "LibXC.jl" begin
+@testset verbose=true "LibxcNative.jl" begin
     @testset verbose=true "API compatibility" begin
         test_api()
     end

@@ -1,4 +1,4 @@
-using LibXC
+using LibxcNative
 using Test
 using JSON
 
@@ -11,19 +11,25 @@ function reference_files()
     end)
 end
 
-"""Load all references as (label, data) tuples, sorted alphabetically."""
+"""Load all references as (label, data) tuples, sorted alphabetically.
+
+The label contains the functional name and spin polarization so the test
+summary is self-describing.
+"""
 function load_references()
     map(reference_files()) do f
-        label = replace(f, r"\.json$" => "")
         data = JSON.parsefile(joinpath(REF_DIR, f))
+        name = data["functional"]
+        n_spin = data["n_spin"]
+        label = "$name (n_spin = $n_spin)"
         label => data
     end
 end
 
-"""Convert a JSON array to the Julia array shape expected by LibXC.
+"""Convert a JSON array to the Julia array shape expected by LibxcNative.
 
-For n_spin == 2 LibXC stores the spin/channel dimension first, so we return a
-matrix of size dim × npoints.
+For n_spin == 2 LibxcNative stores the spin/channel dimension first, so we
+return a matrix of size dim × npoints.
 """
 function to_array(data, field)
     if data["n_spin"] == 1
@@ -34,7 +40,7 @@ function to_array(data, field)
     end
 end
 
-"""Build a plain array from a JSON expected field, matching the LibXC layout."""
+"""Build a plain array from a JSON expected field, matching the LibxcNative layout."""
 function to_expected(ref, n_spin)
     if n_spin == 1
         return Float64.(collect(ref))
@@ -65,7 +71,7 @@ function compare_reference(data)
         haskey(expected, field) || continue
         @testset "$field" begin
             got = getproperty(result, Symbol(field))
-            # For n_spin == 1 LibXC returns a vector, for n_spin == 2 a
+            # For n_spin == 1 LibxcNative returns a vector, for n_spin == 2 a
             # dim × npoints matrix.  Bring both to the same layout as the JSON.
             got_arr = n_spin == 1 ? collect(vec(got)) : got
             ref_arr = to_expected(expected[field], n_spin)

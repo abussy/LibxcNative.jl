@@ -1,4 +1,4 @@
-module LibXC
+module LibxcNative
 
 # Native-Julia reimplementation of a subset of libxc functionals.
 # The public API mirrors JuliaMolSim/Libxc.jl.

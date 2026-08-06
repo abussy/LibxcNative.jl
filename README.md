@@ -1,4 +1,4 @@
-# LibXC.jl
+# LibxcNative.jl
 
 Native-Julia reimplementation of a subset of exchange-correlation
 functionals from the [libxc](https://libxc.gitlab.io/) library.
@@ -24,7 +24,7 @@ evaluations are generated at the moment.
 ## Usage
 
 ```julia
-using LibXC
+using LibxcNative
 
 rho = [0.1, 0.2, 0.3, 0.4, 0.5]
 fun = Functional(:lda_x)
@@ -57,7 +57,7 @@ python gen/generate_references.py
 Run the test suite with:
 
 ```julia
-using Pkg; Pkg.test("LibXC")
+using Pkg; Pkg.test("LibxcNative")
 ```
 
 ## License

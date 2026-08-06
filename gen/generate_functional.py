@@ -39,7 +39,7 @@ MPL_HEADER = """# This Source Code Form is subject to the terms of the Mozilla P
 """
 
 
-class LibXCJuliaPrinter(JuliaCodePrinter):
+class LibxcNativeJuliaPrinter(JuliaCodePrinter):
     """Julia printer that understands the libxc-specific helper heads."""
 
     def _print_Function(self, expr: sp.Function) -> str:
@@ -68,7 +68,7 @@ class LibXCJuliaPrinter(JuliaCodePrinter):
 
 def to_julia(expr: sp.Expr) -> str:
     """Convert a SymPy expression to scalar Julia code."""
-    text = LibXCJuliaPrinter().doprint(expr)
+    text = LibxcNativeJuliaPrinter().doprint(expr)
     # The inherited printer uses broadcasted operators; force scalar code.
     text = re.sub(r"\s*\.\*\s*", " * ", text)
     text = re.sub(r"\s*\.\/\s*", " / ", text)
