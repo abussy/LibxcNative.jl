@@ -1,0 +1,18 @@
+# Julia
+*.jl.*.cov
+*.jl.cov
+*.jl.mem
+Manifest.toml
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated artifacts (kept in repo, but ignored if rebuilt locally)
+# test/references/*.json
