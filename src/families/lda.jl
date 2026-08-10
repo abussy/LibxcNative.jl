@@ -1,45 +1,51 @@
 # LDA evaluation kernels.
 
-function evaluate_lda!(mod::Module, params::NamedTuple, n_spin::Int,
+function evaluate_lda!(func::Functional, params::NamedTuple, n_spin::Int,
                        rho::AbstractMatrix, out_zk, out_vrho)
     n_points = size(rho, 2)
+    T = eltype(rho)
+    f_zk   = get_kernel(func, Val(:zk))
+    f_up   = get_kernel(func, Val(:vrho_up))
+    f_down = get_kernel(func, Val(:vrho_down))
 
     if n_spin == 1
         r = selectdim(rho, 1, 1)
         if out_zk !== nothing
-            f_zk = mod.zk
             zk_out = reshape(out_zk, n_points)
+            f_zk = get_kernel(func, Val(:zk_unp))
             map!(zk_out, r) do ri
-                f_zk(params, ri / 2, ri / 2)
+                f_zk(params, ri)
             end
         end
         if out_vrho !== nothing
-            f_up = mod.vrho_up
-            f_down = mod.vrho_down
             v = selectdim(reshape(out_vrho, 1, n_points), 1, 1)
+            f_vrho = get_kernel(func, Val(:vrho_unp))
             map!(v, r) do ri
-                (f_up(params, ri / 2, ri / 2) + f_down(params, ri / 2, ri / 2)) / 2
+                f_vrho(params, ri)
             end
         end
     else
         ru = selectdim(rho, 1, 1)
         rd = selectdim(rho, 1, 2)
         if out_zk !== nothing
-            f_zk = mod.zk
             zk_out = reshape(out_zk, n_points)
             map!(zk_out, ru, rd) do rui, rdi
-                f_zk(params, rui, rdi)
+                rui_c = max(rui, zero(T))
+                rdi_c = max(rdi, zero(T))
+                f_zk(params, rui_c, rdi_c)
             end
         end
         if out_vrho !== nothing
-            f_up = mod.vrho_up
-            f_down = mod.vrho_down
             v = reshape(out_vrho, 2, n_points)
             map!(selectdim(v, 1, 1), ru, rd) do rui, rdi
-                f_up(params, rui, rdi)
+                rui_c = max(rui, zero(T))
+                rdi_c = max(rdi, zero(T))
+                f_up(params, rui_c, rdi_c)
             end
             map!(selectdim(v, 1, 2), ru, rd) do rui, rdi
-                f_down(params, rui, rdi)
+                rui_c = max(rui, zero(T))
+                rdi_c = max(rdi, zero(T))
+                f_down(params, rui_c, rdi_c)
             end
         end
     end

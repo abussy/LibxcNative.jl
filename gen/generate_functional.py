@@ -42,6 +42,12 @@ MPL_HEADER = """# This Source Code Form is subject to the terms of the Mozilla P
 class LibxcNativeJuliaPrinter(JuliaCodePrinter):
     """Julia printer that understands the libxc-specific helper heads."""
 
+    def _print_branch(self, expr: sp.Expr) -> str:
+        """Print a piecewise branch; promote integer 0 to 0.0 for type stability."""
+        if expr.is_zero:
+            return "0.0"
+        return self._print(expr)
+
     def _print_Function(self, expr: sp.Function) -> str:
         name = expr.func.__name__
         if name == "xc_log1p":
@@ -54,16 +60,37 @@ class LibxcNativeJuliaPrinter(JuliaCodePrinter):
             return "atanh(" + self.stringify(expr.args, ", ") + ")"
         if name == "my_piecewise3":
             cond, a, b = expr.args
-            return "ifelse(" + self.stringify([cond, a, b], ", ") + ")"
+            return (
+                "(" + self._print(cond) + " ? "
+                + self._print_branch(a) + " : " + self._print_branch(b) + ")"
+            )
         if name == "my_piecewise5":
             c1, a, c2, b, c = expr.args
-            return "ifelse(" + self.stringify(
-                [c1, a, self._make_piecewise5(c2, b, c)], ", "
-            ) + ")"
+            return (
+                "(" + self._print(c1) + " ? " + self._print_branch(a) + " : "
+                + self._make_piecewise5(c2, b, c) + ")"
+            )
+
         return super()._print_Function(expr)
 
     def _make_piecewise5(self, c2: sp.Expr, b: sp.Expr, c: sp.Expr) -> str:
-        return "ifelse(" + self.stringify([c2, b, c], ", ") + ")"
+        return (
+            "(" + self._print(c2) + " ? " + self._print_branch(b) + " : "
+            + self._print_branch(c) + ")"
+        )
+
+    def _print_Pow(self, expr):
+        base, exp = expr.args
+        if exp.is_Rational:
+            p, q = exp.p, exp.q
+            b = self._print(base)
+            if q == 2:
+                return f"(sqrt({b}) ^ {p})"
+            if q == 3:
+                return f"(cbrt({b}) ^ {p})"
+            if q == 4:
+                return f"(sqrt(sqrt({b})) ^ {p})"
+        return super()._print_Pow(expr)
 
 
 def to_julia(expr: sp.Expr) -> str:
@@ -90,6 +117,30 @@ def _raw_symbols() -> dict[str, sp.Symbol]:
         "lapl_down": sp.Symbol("lapl_down", real=True),
         "tau_up": sp.Symbol("tau_up", positive=True),
         "tau_down": sp.Symbol("tau_down", positive=True),
+    }
+
+
+def _unpolarized_symbols() -> dict[str, sp.Symbol]:
+    return {
+        "rho": sp.Symbol("rho", positive=True),
+        "sigma": sp.Symbol("sigma", positive=True),
+        "lapl": sp.Symbol("lapl", real=True),
+        "tau": sp.Symbol("tau", positive=True),
+    }
+
+
+def _unpolarized_substitution(raw: dict[str, sp.Symbol], unp: dict[str, sp.Symbol]) -> dict[sp.Expr, sp.Expr]:
+    """Map spin-resolved variables to unpolarized ones (rho_up = rho_down = rho/2, etc.)."""
+    return {
+        raw["rho_up"]: unp["rho"] / 2,
+        raw["rho_down"]: unp["rho"] / 2,
+        raw["sigma_aa"]: unp["sigma"] / 4,
+        raw["sigma_ab"]: unp["sigma"] / 4,
+        raw["sigma_bb"]: unp["sigma"] / 4,
+        raw["lapl_up"]: unp["lapl"] / 2,
+        raw["lapl_down"]: unp["lapl"] / 2,
+        raw["tau_up"]: unp["tau"] / 2,
+        raw["tau_down"]: unp["tau"] / 2,
     }
 
 
@@ -130,6 +181,34 @@ def function_signature(family: str, needs_lapl: bool, needs_tau: bool) -> list[s
     return base
 
 
+def unpolarized_signature(family: str, needs_lapl: bool, needs_tau: bool) -> list[str]:
+    """Argument list for the unpolarized (n_spin == 1) scalar kernels."""
+    base = ["rho"]
+    if family in ("gga", "mgga"):
+        base += ["sigma"]
+    if family == "mgga":
+        if needs_lapl:
+            base += ["lapl"]
+        if needs_tau:
+            base += ["tau"]
+    return base
+
+
+def unpolarized_derivatives(
+    family: str, needs_lapl: bool, needs_tau: bool, unp: dict[str, sp.Symbol]
+) -> list[tuple[str, sp.Symbol]]:
+    """Derivative variable names for unpolarized kernels."""
+    out = [("vrho", unp["rho"])]
+    if family in ("gga", "mgga"):
+        out.append(("vsigma", unp["sigma"]))
+    if family == "mgga":
+        if needs_lapl:
+            out.append(("vlapl", unp["lapl"]))
+        if needs_tau:
+            out.append(("vtau", unp["tau"]))
+    return out
+
+
 def generate(name: str) -> str:
     print(f"Generating {name} ...")
     mod = load_math_module(name)
@@ -168,10 +247,28 @@ def generate(name: str) -> str:
     lines.append(f"const FAMILY = :{family}\n")
     lines.append(f"const DEFAULT_PARAMS = (; {params_tuple})\n")
 
+    def body_with_guard(expr: sp.Expr, total_density: str = "rho_up + rho_down") -> str:
+        """Return the indented function body with a density-threshold guard."""
+        if expr.is_zero:
+            body = f"zero({total_density.split()[0]})"
+        else:
+            replacements, reduced = sp.cse(expr)
+            lines = []
+            for sym, val in replacements:
+                lines.append(f"{sym} = {to_julia(val)}")
+            lines.append(to_julia(reduced[0]))
+            body = "\n    ".join(lines)
+        return (
+            f"    if {total_density} <= params.dens_threshold\n"
+            f"        return zero({total_density.split()[0]})\n"
+            "    end\n"
+            "    " + body
+        )
+
     # zk function: energy per particle.
     lines.append(
-        f"function zk(params, {', '.join(args)})\n    "
-        + to_julia(zk_raw).replace("\n", "\n    ")
+        f"function zk(params, {', '.join(args)})\n"
+        + body_with_guard(zk_raw)
         + "\nend\n"
     )
 
@@ -179,8 +276,34 @@ def generate(name: str) -> str:
     for out_name, var in derivs:
         deriv = sp.diff(epsilon, var)
         lines.append(
-            f"function {out_name}(params, {', '.join(args)})\n    "
-            + to_julia(deriv).replace("\n", "\n    ")
+            f"function {out_name}(params, {', '.join(args)})\n"
+            + body_with_guard(deriv)
+            + "\nend\n"
+        )
+
+    # -----------------------------------------------------------------------
+    # Unpolarized (n_spin == 1) kernels: substitute zeta = 0 before printing.
+    # These are much cheaper because all spin-interpolation piecewise disappears.
+    # -----------------------------------------------------------------------
+    unp = _unpolarized_symbols()
+    unp_sub = _unpolarized_substitution(r, unp)
+    epsilon_unp = epsilon.xreplace(unp_sub)
+    # Energy per particle for the unpolarized case.
+    zk_unp = epsilon_unp / unp["rho"]
+
+    unp_args = unpolarized_signature(family, needs_lapl, needs_tau)
+    unp_derivs = unpolarized_derivatives(family, needs_lapl, needs_tau, unp)
+
+    lines.append(
+        f"function zk_unp(params, {', '.join(unp_args)})\n"
+        + body_with_guard(zk_unp, "rho")
+        + "\nend\n"
+    )
+    for out_name, var in unp_derivs:
+        deriv = sp.diff(epsilon_unp, var)
+        lines.append(
+            f"function {out_name}_unp(params, {', '.join(unp_args)})\n"
+            + body_with_guard(deriv, "rho")
             + "\nend\n"
         )
 

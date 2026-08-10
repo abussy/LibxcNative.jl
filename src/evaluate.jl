@@ -35,10 +35,9 @@ function evaluate!(func::Functional;
                    vlapl = nothing,
                    vtau = nothing,
                    kwargs...)
-    mod = FUNCTIONAL_MODULES[func.identifier]
     family = func.family
 
-    _validate_inputs(family, sigma, lapl, tau)
+    _validate_inputs(func, sigma, lapl, tau)
 
     output_names = _requested_outputs(func, derivatives)
     shape = _grid_shape(func, rho)
@@ -52,14 +51,15 @@ function evaluate!(func::Functional;
     tau2   = tau   !== nothing ? _normalize_tau(tau, func.n_spin)      : nothing
 
     if family == :lda
-        evaluate_lda!(mod, func.params, func.n_spin, rho2, outputs.zk, outputs.vrho)
+        evaluate_lda!(func, func.params, func.n_spin, rho2, outputs.zk, outputs.vrho)
     elseif family == :gga
-        evaluate_gga!(mod, func.params, func.n_spin, rho2, sigma2,
+        evaluate_gga!(func, func.params, func.n_spin, rho2, sigma2,
                       outputs.zk, outputs.vrho, outputs.vsigma)
     elseif family == :mgga
-        evaluate_mgga!(mod, func.params, func.n_spin, rho2, sigma2, lapl2, tau2,
+        evaluate_mgga!(func, func.params, func.n_spin, rho2, sigma2, lapl2, tau2,
                        outputs.zk, outputs.vrho, outputs.vsigma,
-                       outputs.vlapl, outputs.vtau)
+                       outputs.vlapl, outputs.vtau,
+                       needs_laplacian(func), needs_tau(func))
     else
         throw(ArgumentError("family $family not implemented"))
     end
@@ -165,13 +165,16 @@ function _build_output(names, zk, vrho, vsigma, vlapl, vtau)
     return NamedTuple(pairs)
 end
 
-function _validate_inputs(family, sigma, lapl, tau)
+function _validate_inputs(func::Functional, sigma, lapl, tau)
+    family = func.family
     if family in (:gga, :mgga) && sigma === nothing
         throw(ArgumentError("sigma is required for GGA and meta-GGA functionals"))
     end
-    if family == :mgga && tau === nothing
-        # Some mGGAs need lapl instead; our current set needs tau.
-        throw(ArgumentError("tau is required for meta-GGA functionals"))
+    if family == :mgga
+        needs_tau(func) && tau === nothing &&
+            throw(ArgumentError("tau is required for $(func.identifier)"))
+        needs_laplacian(func) && lapl === nothing &&
+            throw(ArgumentError("lapl is required for $(func.identifier)"))
     end
 end
 

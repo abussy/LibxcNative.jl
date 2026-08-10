@@ -1,4 +1,4 @@
-mutable struct Functional
+mutable struct Functional{ID, P<:NamedTuple}
     identifier::Symbol
     n_spin::Int
     name::String
@@ -8,7 +8,7 @@ mutable struct Functional
     derivatives::Vector{Int}
     references::Vector{@NamedTuple{reference::String, doi::String, bibtex::String, key::String}}
     spin_dimensions::SpinDimensions
-    params::NamedTuple
+    params::P
 
     function Functional(identifier::Symbol; n_spin::Integer=1)
         n_spin = Int(n_spin)
@@ -19,7 +19,7 @@ mutable struct Functional
         mod = FUNCTIONAL_MODULES[identifier]
         dims = spin_dimensions(spec.family, n_spin)
         params = mod.DEFAULT_PARAMS
-        new(
+        new{identifier, typeof(params)}(
             identifier,
             n_spin,
             String(identifier),
@@ -36,19 +36,19 @@ end
 
 available_functionals() = collect(keys(FUNCTIONAL_SPECS))
 
-supported_derivatives(f::Functional) = f.derivatives
+supported_derivatives(f::Functional{ID,P}) where {ID,P} = f.derivatives
 
-is_lda(f::Functional)    = f.family in (:lda, :hyb_lda)
-is_gga(f::Functional)    = f.family in (:gga, :hyb_gga)
-is_mgga(f::Functional)   = f.family in (:mgga, :hyb_mgga)
-is_hybrid(f::Functional) = f.family in (:hyb_gga, :hyb_lda, :hyb_mgga)
-is_vv10(f::Functional)   = :vv10 in f.flags
-is_range_separated(f::Functional) = any(s -> s in f.flags, (:hym_cam, :cam_omega, :cam_alpha, :cam_beta))
-is_global_hybrid(f::Functional)   = :exx_coefficient in f.flags
-needs_laplacian(f::Functional)    = :needs_laplacian in f.flags
-needs_tau(f::Functional)          = :needs_tau in f.flags
+is_lda(f::Functional{ID,P})    where {ID,P} = f.family in (:lda, :hyb_lda)
+is_gga(f::Functional{ID,P})    where {ID,P} = f.family in (:gga, :hyb_gga)
+is_mgga(f::Functional{ID,P})   where {ID,P} = f.family in (:mgga, :hyb_mgga)
+is_hybrid(f::Functional{ID,P}) where {ID,P} = f.family in (:hyb_gga, :hyb_lda, :hyb_mgga)
+is_vv10(f::Functional{ID,P})   where {ID,P} = :vv10 in f.flags
+is_range_separated(f::Functional{ID,P}) where {ID,P} = any(s -> s in f.flags, (:hym_cam, :cam_omega, :cam_alpha, :cam_beta))
+is_global_hybrid(f::Functional{ID,P})   where {ID,P} = :exx_coefficient in f.flags
+needs_laplacian(f::Functional{ID,P})    where {ID,P} = :needs_laplacian in f.flags
+needs_tau(f::Functional{ID,P})          where {ID,P} = :needs_tau in f.flags
 
-function Base.getproperty(f::Functional, name::Symbol)
+function Base.getproperty(f::Functional{ID,P}, name::Symbol) where {ID,P}
     if name == :density_threshold
         return getfield(f, :params).dens_threshold
     elseif name == :zeta_threshold
@@ -74,7 +74,7 @@ function Base.getproperty(f::Functional, name::Symbol)
     end
 end
 
-function Base.setproperty!(f::Functional, name::Symbol, value)
+function Base.setproperty!(f::Functional{ID,P}, name::Symbol, value) where {ID,P}
     if name == :density_threshold
         f.params = merge(f.params, (dens_threshold=Float64(value),))
     elseif name == :zeta_threshold
@@ -84,4 +84,17 @@ function Base.setproperty!(f::Functional, name::Symbol, value)
     else
         setfield!(f, name, value)
     end
+end
+
+# ---------------------------------------------------------------------------
+# Typed kernel getters.  These turn the functional identifier (known at
+# compile time for a concrete Functional{ID,P}) into a direct reference to the
+# generated scalar kernel, avoiding dynamic dispatch inside the per-point loops.
+# ---------------------------------------------------------------------------
+
+@generated function get_kernel(::Functional{ID,P}, ::Val{out}) where {ID, P, out}
+    mod = FUNCTIONAL_MODULES[ID]
+    isdefined(mod, out) || return :(error("kernel $out not implemented for :$ID"))
+    f = getfield(mod, out)
+    return :($f)
 end
