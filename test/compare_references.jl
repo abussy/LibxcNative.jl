@@ -4,6 +4,23 @@ using JSON
 
 const REF_DIR = joinpath(@__DIR__, "references")
 
+# ---------------------------------------------------------------------------
+# Device transfer utilities.  CPU fallbacks live here; GPU packages add methods
+# in their package extensions (ext/LibxcNative*Ext.jl).
+# ---------------------------------------------------------------------------
+"""Move an array to the CPU.  No-op if it is already a `Base.Array`."""
+to_cpu(x::AbstractArray) = Array(x)
+to_cpu(x::Array) = x
+
+"""Move an array to the active compute device.  CPU fallback is the identity."""
+to_device(x) = x
+
+"""Move an array back to the CPU from the active compute device.  CPU fallback is the identity."""
+to_host(x) = x
+
+"""Parse a reference input field and move it to the active compute device."""
+reference_input(data, field) = to_device(to_cpu(data, field))
+
 """Return the sorted list of reference JSON files."""
 function reference_files()
     sort!(filter(readdir(REF_DIR)) do f
@@ -26,28 +43,14 @@ function load_references()
     end
 end
 
-"""Convert a JSON array to the Julia array shape expected by LibxcNative.
+"""Convert a JSON input field to the Julia array shape expected by LibxcNative.
 
-For n_spin == 2 LibxcNative stores the spin/channel dimension first, so we
-return a matrix of size dim × npoints.
+For n_spin == 2 the JSON stores one vector per grid point; `stack` turns that
+into a dim × npoints matrix.  The result is always a CPU `Array{Float64}`;
+the caller can move it to a GPU with `to_device` if desired.
 """
-function to_array(data, field)
-    if data["n_spin"] == 1
-        return Float64.(collect(data["inputs"][field]))
-    else
-        rows = Vector{Float64}.(data["inputs"][field])
-        return hcat(rows...)  # dim × npoints
-    end
-end
+to_cpu(data, field) = Float64.(stack(data["inputs"][field]))
 
-"""Build a plain array from a JSON expected field, matching the LibxcNative layout."""
-function to_expected(ref, n_spin)
-    if n_spin == 1
-        return Float64.(collect(ref))
-    else
-        return hcat(Vector{Float64}.(ref)...)
-    end
-end
 
 """Evaluate a functional and compare all available reference fields."""
 function compare_reference(data)
@@ -55,16 +58,16 @@ function compare_reference(data)
     n_spin = data["n_spin"]
     fun = Functional(name; n_spin=n_spin)
 
-    rho   = to_array(data, "rho")
-    sigma = to_array(data, "sigma")
-    lapl  = to_array(data, "lapl")
-    tau   = to_array(data, "tau")
+    rho   = reference_input(data, "rho")
+    sigma = reference_input(data, "sigma")
+    lapl  = reference_input(data, "lapl")
+    tau   = reference_input(data, "tau")
     result = evaluate(fun; rho=rho, sigma=sigma, lapl=lapl, tau=tau)
 
     expected = data["expected"]
 
     @testset "zk" begin
-        @test isapprox(result.zk, Float64.(expected["zk"]); rtol=1e-10, atol=1e-12)
+        @test isapprox(to_host(result.zk), Float64.(expected["zk"]); rtol=1e-10, atol=1e-12)
     end
 
     for field in ("vrho", "vsigma", "vlapl", "vtau")
@@ -73,8 +76,8 @@ function compare_reference(data)
             got = getproperty(result, Symbol(field))
             # For n_spin == 1 LibxcNative returns a vector, for n_spin == 2 a
             # dim × npoints matrix.  Bring both to the same layout as the JSON.
-            got_arr = n_spin == 1 ? collect(vec(got)) : got
-            ref_arr = to_expected(expected[field], n_spin)
+            got_arr = n_spin == 1 ? to_host(vec(got)) : to_host(got)
+            ref_arr = Float64.(stack(expected[field]))
             @test isapprox(got_arr, ref_arr; rtol=5e-5, atol=1e-10)
         end
     end

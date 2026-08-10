@@ -15,8 +15,8 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         t = needs_tau  ? selectdim(tau, 1, 1)  : nothing
 
         if out_zk !== nothing
-            f_zk = get_kernel(func, Val(:zk_unp))
             zk_out = reshape(out_zk, n_points)
+            f_zk = get_kernel(func, Val(:zk_unp))
             if needs_lapl && needs_tau
                 map!(zk_out, r, s, l, t) do ri, si, li, ti
                     f_zk(params, ri, si, li, ti)
@@ -37,8 +37,8 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
         if out_vrho !== nothing
-            f_vrho = get_kernel(func, Val(:vrho_unp))
             v = selectdim(reshape(out_vrho, 1, n_points), 1, 1)
+            f_vrho = get_kernel(func, Val(:vrho_unp))
             if needs_lapl && needs_tau
                 map!(v, r, s, l, t) do ri, si, li, ti
                     f_vrho(params, ri, si, li, ti)
@@ -59,8 +59,8 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
         if out_vsigma !== nothing
-            f_vsigma = get_kernel(func, Val(:vsigma_unp))
             v = selectdim(reshape(out_vsigma, 1, n_points), 1, 1)
+            f_vsigma = get_kernel(func, Val(:vsigma_unp))
             if needs_lapl && needs_tau
                 map!(v, r, s, l, t) do ri, si, li, ti
                     f_vsigma(params, ri, si, li, ti)
@@ -81,22 +81,26 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
         if out_vlapl !== nothing
-            f_vlapl = get_kernel(func, Val(:vlapl_unp))
             v = selectdim(reshape(out_vlapl, 1, n_points), 1, 1)
+            f_vlapl = get_kernel(func, Val(:vlapl_unp))
             if needs_tau
                 map!(v, r, s, l, t) do ri, si, li, ti
                     f_vlapl(params, ri, si, li, ti)
                 end
-            else
+            elseif needs_lapl
                 map!(v, r, s, l) do ri, si, li
                     f_vlapl(params, ri, si, li)
+                end
+            else
+                map!(v, r, s) do ri, si
+                    f_vlapl(params, ri, si)
                 end
             end
         end
 
         if out_vtau !== nothing
-            f_vtau = get_kernel(func, Val(:vtau_unp))
             v = selectdim(reshape(out_vtau, 1, n_points), 1, 1)
+            f_vtau = get_kernel(func, Val(:vtau_unp))
             if needs_lapl
                 map!(v, r, s, l, t) do ri, si, li, ti
                     f_vtau(params, ri, si, li, ti)
@@ -109,6 +113,13 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
     else
+        f_zk   = get_kernel(func, Val(:zk))
+        f_up   = get_kernel(func, Val(:vrho_up))
+        f_down = get_kernel(func, Val(:vrho_down))
+        f_aa   = get_kernel(func, Val(:vsigma_aa))
+        f_ab   = get_kernel(func, Val(:vsigma_ab))
+        f_bb   = get_kernel(func, Val(:vsigma_bb))
+
         ru = selectdim(rho, 1, 1)
         rd = selectdim(rho, 1, 2)
         saa = selectdim(sigma, 1, 1)
@@ -120,7 +131,6 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         tb = needs_tau  ? selectdim(tau, 1, 2)  : nothing
 
         if out_zk !== nothing
-            f_zk = get_kernel(func, Val(:zk))
             zk_out = reshape(out_zk, n_points)
             if needs_lapl && needs_tau
                 map!(zk_out, ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
@@ -144,8 +154,6 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
         if out_vrho !== nothing
-            f_up = get_kernel(func, Val(:vrho_up))
-            f_down = get_kernel(func, Val(:vrho_down))
             v = reshape(out_vrho, 2, n_points)
             if needs_lapl && needs_tau
                 map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
@@ -184,9 +192,6 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         end
 
         if out_vsigma !== nothing
-            f_aa = get_kernel(func, Val(:vsigma_aa))
-            f_ab = get_kernel(func, Val(:vsigma_ab))
-            f_bb = get_kernel(func, Val(:vsigma_bb))
             v = reshape(out_vsigma, 3, n_points)
             if needs_lapl && needs_tau
                 map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi

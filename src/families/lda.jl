@@ -4,9 +4,6 @@ function evaluate_lda!(func::Functional, params::NamedTuple, n_spin::Int,
                        rho::AbstractMatrix, out_zk, out_vrho)
     n_points = size(rho, 2)
     T = eltype(rho)
-    f_zk   = get_kernel(func, Val(:zk))
-    f_up   = get_kernel(func, Val(:vrho_up))
-    f_down = get_kernel(func, Val(:vrho_down))
 
     if n_spin == 1
         r = selectdim(rho, 1, 1)
@@ -25,6 +22,9 @@ function evaluate_lda!(func::Functional, params::NamedTuple, n_spin::Int,
             end
         end
     else
+        f_zk   = get_kernel(func, Val(:zk))
+        f_up   = get_kernel(func, Val(:vrho_up))
+        f_down = get_kernel(func, Val(:vrho_down))
         ru = selectdim(rho, 1, 1)
         rd = selectdim(rho, 1, 2)
         if out_zk !== nothing
