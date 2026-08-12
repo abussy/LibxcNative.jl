@@ -31,7 +31,7 @@ end
     @testset verbose=true "API compatibility" begin
         test_api()
     end
-    @testset verbose=true "CPU vs libxc references" begin
+    @testset verbose=true "$backend vs libxc references" begin
         test_against_references()
     end
 end

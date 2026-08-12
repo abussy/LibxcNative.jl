@@ -7,16 +7,16 @@ function evaluate_lda!(func::Functional, params::NamedTuple, n_spin::Int,
 
     if n_spin == 1
         r = selectdim(rho, 1, 1)
+        f_zk = get_kernel(func, Val(:zk_unp))
+        f_vrho = get_kernel(func, Val(:vrho_unp))
         if out_zk !== nothing
             zk_out = reshape(out_zk, n_points)
-            f_zk = get_kernel(func, Val(:zk_unp))
             map!(zk_out, r) do ri
                 f_zk(params, ri)
             end
         end
         if out_vrho !== nothing
             v = selectdim(reshape(out_vrho, 1, n_points), 1, 1)
-            f_vrho = get_kernel(func, Val(:vrho_unp))
             map!(v, r) do ri
                 f_vrho(params, ri)
             end

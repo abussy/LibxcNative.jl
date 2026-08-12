@@ -9,23 +9,23 @@ function evaluate_gga!(func::Functional, params::NamedTuple, n_spin::Int,
     if n_spin == 1
         r  = selectdim(rho, 1, 1)
         s  = selectdim(sigma, 1, 1)
+        f_zk    = get_kernel(func, Val(:zk_unp))
+        f_vrho  = get_kernel(func, Val(:vrho_unp))
+        f_vsigma = get_kernel(func, Val(:vsigma_unp))
         if out_zk !== nothing
             zk_out = reshape(out_zk, n_points)
-            f_zk = get_kernel(func, Val(:zk_unp))
             map!(zk_out, r, s) do ri, si
                 f_zk(params, ri, si)
             end
         end
         if out_vrho !== nothing
             v = selectdim(reshape(out_vrho, 1, n_points), 1, 1)
-            f_vrho = get_kernel(func, Val(:vrho_unp))
             map!(v, r, s) do ri, si
                 f_vrho(params, ri, si)
             end
         end
         if out_vsigma !== nothing
             v = selectdim(reshape(out_vsigma, 1, n_points), 1, 1)
-            f_vsigma = get_kernel(func, Val(:vsigma_unp))
             map!(v, r, s) do ri, si
                 f_vsigma(params, ri, si)
             end
