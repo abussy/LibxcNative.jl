@@ -13,7 +13,8 @@ export
     supported_derivatives,
     is_lda, is_gga, is_mgga, is_hybrid,
     is_vv10, is_range_separated, is_global_hybrid,
-    needs_laplacian, needs_tau
+    needs_laplacian, needs_tau,
+    to_device, to_host
 
 include("spin_dimensions.jl")
 include("generated/registry.jl")
@@ -22,5 +23,15 @@ include("families/lda.jl")
 include("families/gga.jl")
 include("families/mgga.jl")
 include("evaluate.jl")
+
+# ---------------------------------------------------------------------------
+# Device transfer utilities.  CPU fallbacks live here; GPU backends add
+# specialized methods via package extensions (ext/LibxcNative*Ext.jl).
+# ---------------------------------------------------------------------------
+"""Move an array to the active compute device.  CPU fallback is the identity."""
+to_device(x) = x
+
+"""Move an array back to the CPU from the active compute device.  CPU fallback is the identity."""
+to_host(x) = x
 
 end # module

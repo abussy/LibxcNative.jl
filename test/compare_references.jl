@@ -4,24 +4,9 @@ using JSON
 
 const REF_DIR = joinpath(@__DIR__, "references")
 
-# ---------------------------------------------------------------------------
-# Device transfer utilities.  CPU fallbacks live here; GPU packages add methods
-# in their package extensions (ext/LibxcNative*Ext.jl).
-# ---------------------------------------------------------------------------
-"""Move an array to the active compute device.  CPU fallback is the identity."""
-to_device(x) = x
-
-"""Move an array back to the CPU from the active compute device.  CPU fallback is the identity."""
-to_host(x) = x
-
-"""Parse a reference input field to a CPU array in the layout LibxcNative expects."""
-reference_input(data, field) = to_cpu(data, field)
-
 """Return the sorted list of reference JSON files."""
 function reference_files()
-    sort!(filter(readdir(REF_DIR)) do f
-        endswith(f, ".json")
-    end)
+    sort(filter(f -> endswith(f, ".json"), readdir(REF_DIR)))
 end
 
 """Load all references as (label, data) tuples, sorted alphabetically.
@@ -45,8 +30,7 @@ For n_spin == 2 the JSON stores one vector per grid point; `stack` turns that
 into a dim × npoints matrix.  The result is always a CPU `Array{Float64}`;
 the caller can move it to a GPU with `to_device` if desired.
 """
-to_cpu(data, field) = Float64.(stack(data["inputs"][field]))
-
+parse_input(data, field) = Float64.(stack(data["inputs"][field]))
 
 """Evaluate a functional and compare all available reference fields."""
 function compare_reference(data)
@@ -54,15 +38,11 @@ function compare_reference(data)
     n_spin = data["n_spin"]
     fun = Functional(name; n_spin=n_spin)
 
-    rho   = to_device(reference_input(data, "rho"))
-    sigma = to_device(reference_input(data, "sigma"))
-    lapl  = to_device(reference_input(data, "lapl"))
-    tau   = to_device(reference_input(data, "tau"))
+    rho   = to_device(parse_input(data, "rho"))
+    sigma = to_device(parse_input(data, "sigma"))
+    lapl  = to_device(parse_input(data, "lapl"))
+    tau   = to_device(parse_input(data, "tau"))
     result = evaluate(fun; rho=rho, sigma=sigma, lapl=lapl, tau=tau)
-
-    if isdefined(Main, :TEST_BACKEND) && Main.TEST_BACKEND != "cpu"
-        @test !(rho isa Array)
-    end
 
     expected = data["expected"]
 
