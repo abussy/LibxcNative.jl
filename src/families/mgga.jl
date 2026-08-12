@@ -18,8 +18,8 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         f_zk    = get_kernel(func, Val(:zk_unp))
         f_vrho  = get_kernel(func, Val(:vrho_unp))
         f_vsig  = get_kernel(func, Val(:vsigma_unp))
-        f_vlapl = needs_lapl ? get_kernel(func, Val(:vlapl_unp)) : nothing
-        f_vtau  = needs_tau  ? get_kernel(func, Val(:vtau_unp))  : nothing
+        f_vlapl = get_kernel(func, Val(:vlapl_unp))
+        f_vtau  = get_kernel(func, Val(:vtau_unp))
 
         if out_zk !== nothing
             zk_out = reshape(out_zk, n_points)
@@ -121,10 +121,10 @@ function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
         f_vsig_aa  = get_kernel(func, Val(:vsigma_aa))
         f_vsig_ab  = get_kernel(func, Val(:vsigma_ab))
         f_vsig_bb  = get_kernel(func, Val(:vsigma_bb))
-        f_vlapl_up = needs_lapl ? get_kernel(func, Val(:vlapl_up))   : nothing
-        f_vlapl_dn = needs_lapl ? get_kernel(func, Val(:vlapl_down)) : nothing
-        f_vtau_up  = needs_tau  ? get_kernel(func, Val(:vtau_up))    : nothing
-        f_vtau_dn  = needs_tau  ? get_kernel(func, Val(:vtau_down))  : nothing
+        f_vlapl_up = get_kernel(func, Val(:vlapl_up))
+        f_vlapl_dn = get_kernel(func, Val(:vlapl_down))
+        f_vtau_up  = get_kernel(func, Val(:vtau_up))
+        f_vtau_dn  = get_kernel(func, Val(:vtau_down))
 
         ru = selectdim(rho, 1, 1)
         rd = selectdim(rho, 1, 2)

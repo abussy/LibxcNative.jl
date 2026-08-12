@@ -90,11 +90,23 @@ end
 # Typed kernel getters.  These turn the functional identifier (known at
 # compile time for a concrete Functional{ID,P}) into a direct reference to the
 # generated scalar kernel, avoiding dynamic dispatch inside the per-point loops.
+#
+# When a kernel is not implemented (e.g. vlapl for a functional that does not
+# need the laplacian), get_kernel returns a MissingKernel singleton instead of
+# throwing.  This is isbits, so it is safe to capture in GPU kernels; the
+# MissingKernel is never actually called because the corresponding output is
+# nothing and the if-guard around the map! is skipped.
 # ---------------------------------------------------------------------------
+
+struct MissingKernel end
+(::MissingKernel)(args...) = error("kernel not implemented for this functional")
 
 @generated function get_kernel(::Functional{ID,P}, ::Val{out}) where {ID, P, out}
     mod = FUNCTIONAL_MODULES[ID]
-    isdefined(mod, out) || return :(error("kernel $out not implemented for :$ID"))
-    f = getfield(mod, out)
-    return :($f)
+    try
+        f = getfield(mod, out)
+        return :($f)
+    catch
+        return :(MissingKernel())
+    end
 end
