@@ -12,7 +12,7 @@ end
 function evaluate_lda_unp!(func::Functional, params::NamedTuple,
                            rho::AbstractMatrix, out_zk, out_vrho)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     r = selectdim(rho, 1, 1)
     f_zk   = get_kernel(func, Val(:zk_unp))
@@ -36,7 +36,7 @@ end
 function evaluate_lda_pol!(func::Functional, params::NamedTuple,
                            rho::AbstractMatrix, out_zk, out_vrho)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     f_zk   = get_kernel(func, Val(:zk))
     f_up   = get_kernel(func, Val(:vrho_up))
@@ -47,21 +47,21 @@ function evaluate_lda_pol!(func::Functional, params::NamedTuple,
     if out_zk !== nothing
         zk_out = reshape(out_zk, n_points)
         map!(zk_out, ru, rd) do rui, rdi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_zk(params, rui_c, rdi_c)
         end
     end
     if out_vrho !== nothing
         v = reshape(out_vrho, 2, n_points)
         map!(selectdim(v, 1, 1), ru, rd) do rui, rdi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_up(params, rui_c, rdi_c)
         end
         map!(selectdim(v, 1, 2), ru, rd) do rui, rdi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_down(params, rui_c, rdi_c)
         end
     end

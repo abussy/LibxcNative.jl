@@ -14,7 +14,7 @@ function evaluate_gga_unp!(func::Functional, params::NamedTuple,
                            rho::AbstractMatrix, sigma::AbstractMatrix,
                            out_zk, out_vrho, out_vsigma)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     r = selectdim(rho, 1, 1)
     s = selectdim(sigma, 1, 1)
@@ -47,7 +47,7 @@ function evaluate_gga_pol!(func::Functional, params::NamedTuple,
                            rho::AbstractMatrix, sigma::AbstractMatrix,
                            out_zk, out_vrho, out_vsigma)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     f_zk   = get_kernel(func, Val(:zk))
     f_up   = get_kernel(func, Val(:vrho_up))
@@ -65,8 +65,8 @@ function evaluate_gga_pol!(func::Functional, params::NamedTuple,
     if out_zk !== nothing
         zk_out = reshape(out_zk, n_points)
         map!(zk_out, ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_zk(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
     end
@@ -74,13 +74,13 @@ function evaluate_gga_pol!(func::Functional, params::NamedTuple,
     if out_vrho !== nothing
         v = reshape(out_vrho, 2, n_points)
         map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_up(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
         map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_down(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
     end
@@ -88,18 +88,18 @@ function evaluate_gga_pol!(func::Functional, params::NamedTuple,
     if out_vsigma !== nothing
         v = reshape(out_vsigma, 3, n_points)
         map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_aa(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
         map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_ab(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
         map!(selectdim(v, 1, 3), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-            rui_c = max(rui, zero(T))
-            rdi_c = max(rdi, zero(T))
+            rui_c = max(rui, zero(rui))
+            rdi_c = max(rdi, zero(rui))
             f_bb(params, rui_c, rdi_c, saai, sabi, sbbi)
         end
     end

@@ -24,7 +24,7 @@ function evaluate_mgga_unp!(func::Functional, params::NamedTuple,
                             out_zk, out_vrho, out_vsigma, out_vlapl, out_vtau,
                             needs_lapl::Bool, needs_tau::Bool)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     r = selectdim(rho, 1, 1)
     s = selectdim(sigma, 1, 1)
@@ -140,7 +140,7 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
                             out_zk, out_vrho, out_vsigma, out_vlapl, out_vtau,
                             needs_lapl::Bool, needs_tau::Bool)
     n_points = size(rho, 2)
-    T = eltype(rho)
+    
 
     f_zk       = get_kernel(func, Val(:zk))
     f_vrho_up  = get_kernel(func, Val(:vrho_up))
@@ -167,20 +167,20 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
         zk_out = reshape(out_zk, n_points)
         if needs_lapl && needs_tau
             map!(zk_out, ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_zk(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
         elseif needs_tau
             map!(zk_out, ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_zk(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
         else
             map!(zk_out, ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_zk(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
         end
@@ -190,35 +190,35 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
         v = reshape(out_vrho, 2, n_points)
         if needs_lapl && needs_tau
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_up(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_dn(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
         elseif needs_tau
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_up(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_dn(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
         else
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_up(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vrho_dn(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
         end
@@ -228,50 +228,50 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
         v = reshape(out_vsigma, 3, n_points)
         if needs_lapl && needs_tau
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_aa(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_ab(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
             map!(selectdim(v, 1, 3), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_bb(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
         elseif needs_tau
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_aa(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_ab(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
             map!(selectdim(v, 1, 3), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_bb(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
         else
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_aa(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_ab(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
             map!(selectdim(v, 1, 3), ru, rd, saa, sab, sbb) do rui, rdi, saai, sabi, sbbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vsig_bb(params, rui_c, rdi_c, saai, sabi, sbbi)
             end
         end
@@ -281,24 +281,24 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
         v = reshape(out_vlapl, 2, n_points)
         if needs_tau
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vlapl_up(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vlapl_dn(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
         else
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb) do rui, rdi, saai, sabi, sbbi, lai, lbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vlapl_up(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, la, lb) do rui, rdi, saai, sabi, sbbi, lai, lbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vlapl_dn(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi)
             end
         end
@@ -308,24 +308,24 @@ function evaluate_mgga_pol!(func::Functional, params::NamedTuple,
         v = reshape(out_vtau, 2, n_points)
         if needs_lapl
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vtau_up(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, la, lb, ta, tb) do rui, rdi, saai, sabi, sbbi, lai, lbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vtau_dn(params, rui_c, rdi_c, saai, sabi, sbbi, lai, lbi, tai, tbi)
             end
         else
             map!(selectdim(v, 1, 1), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vtau_up(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
             map!(selectdim(v, 1, 2), ru, rd, saa, sab, sbb, ta, tb) do rui, rdi, saai, sabi, sbbi, tai, tbi
-                rui_c = max(rui, zero(T))
-                rdi_c = max(rdi, zero(T))
+                rui_c = max(rui, zero(rui))
+                rdi_c = max(rdi, zero(rui))
                 f_vtau_dn(params, rui_c, rdi_c, saai, sabi, sbbi, tai, tbi)
             end
         end
