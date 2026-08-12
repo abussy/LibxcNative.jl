@@ -19,6 +19,7 @@ mutable struct Functional{ID, P<:NamedTuple}
         mod = FUNCTIONAL_MODULES[identifier]
         dims = spin_dimensions(spec.family, n_spin)
         params = mod.DEFAULT_PARAMS
+        derivatives = _derivatives_from_flags(spec.flags)
         new{identifier, typeof(params)}(
             identifier,
             n_spin,
@@ -26,7 +27,7 @@ mutable struct Functional{ID, P<:NamedTuple}
             spec.kind,
             spec.family,
             spec.flags,
-            [0, 1],
+            derivatives,
             spec.references,
             dims,
             params,
@@ -35,6 +36,13 @@ mutable struct Functional{ID, P<:NamedTuple}
 end
 
 available_functionals() = collect(keys(FUNCTIONAL_SPECS))
+
+function _derivatives_from_flags(flags::Vector{Symbol})
+    derivs = Int[]
+    :exc in flags && push!(derivs, 0)
+    :vxc in flags && push!(derivs, 1)
+    return derivs
+end
 
 supported_derivatives(f::Functional{ID,P}) where {ID,P} = f.derivatives
 
@@ -54,9 +62,9 @@ function Base.getproperty(f::Functional{ID,P}, name::Symbol) where {ID,P}
     elseif name == :zeta_threshold
         return getfield(f, :params).zeta_threshold
     elseif name == :sigma_threshold
-        return 1e-10  # placeholder matching upstream behavior
+        return 1e-10  # API stub: not forwarded to generated kernels
     elseif name == :tau_threshold
-        return 1e-10
+        return 1e-10  # API stub: not forwarded to generated kernels
     elseif name == :exx_coefficient
         return nothing
     elseif name == :cam_omega
@@ -80,7 +88,7 @@ function Base.setproperty!(f::Functional{ID,P}, name::Symbol, value) where {ID,P
     elseif name == :zeta_threshold
         f.params = merge(f.params, (zeta_threshold=Float64(value),))
     elseif name in (:sigma_threshold, :tau_threshold)
-        # stored only for API compatibility; not forwarded to generated kernels
+        # API stub: silently ignored; generated kernels do not use these thresholds
     else
         setfield!(f, name, value)
     end

@@ -10,15 +10,11 @@ function evaluate(func::Functional;
                   vlapl = nothing,
                   vtau = nothing,
                   kwargs...)
+    outputs = evaluate!(func; rho=rho, sigma=sigma, lapl=lapl, tau=tau,
+                        derivatives=derivatives, zk=zk, vrho=vrho,
+                        vsigma=vsigma, vlapl=vlapl, vtau=vtau, kwargs...)
+
     output_names = _requested_outputs(func, derivatives)
-    shape = _grid_shape(func, rho)
-
-    outputs = _collect_outputs(output_names, zk, vrho, vsigma, vlapl, vtau,
-                               func.spin_dimensions, shape, rho)
-
-    evaluate!(func; rho=rho, sigma=sigma, lapl=lapl, tau=tau,
-              derivatives=derivatives, outputs...)
-
     return _build_output(output_names, outputs.zk, outputs.vrho, outputs.vsigma,
                          outputs.vlapl, outputs.vtau)
 end
@@ -64,7 +60,7 @@ function evaluate!(func::Functional;
         throw(ArgumentError("family $family not implemented"))
     end
 
-    return nothing
+    return outputs
 end
 
 # ---------------------------------------------------------------------------

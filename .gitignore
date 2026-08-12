@@ -4,6 +4,10 @@
 *.jl.mem
 Manifest.toml
 
+# Python
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
 

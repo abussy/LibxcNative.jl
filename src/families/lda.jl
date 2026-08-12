@@ -1,4 +1,8 @@
 # LDA evaluation kernels.
+#
+# Clamping: n_spin == 1 kernels have their own density-threshold guard, so no
+# wrapper clamping is needed.  n_spin == 2 clamps rho_up/rho_down to prevent
+# negative spin densities from reaching the spin-interpolation code.
 
 function evaluate_lda!(func::Functional, params::NamedTuple, n_spin::Int,
                        rho::AbstractMatrix, out_zk, out_vrho)
@@ -48,7 +52,7 @@ function evaluate_lda_pol!(func::Functional, params::NamedTuple,
         zk_out = reshape(out_zk, n_points)
         map!(zk_out, ru, rd) do rui, rdi
             rui_c = max(rui, zero(rui))
-            rdi_c = max(rdi, zero(rui))
+            rdi_c = max(rdi, zero(rdi))
             f_zk(params, rui_c, rdi_c)
         end
     end
@@ -56,12 +60,12 @@ function evaluate_lda_pol!(func::Functional, params::NamedTuple,
         v = reshape(out_vrho, 2, n_points)
         map!(selectdim(v, 1, 1), ru, rd) do rui, rdi
             rui_c = max(rui, zero(rui))
-            rdi_c = max(rdi, zero(rui))
+            rdi_c = max(rdi, zero(rdi))
             f_up(params, rui_c, rdi_c)
         end
         map!(selectdim(v, 1, 2), ru, rd) do rui, rdi
             rui_c = max(rui, zero(rui))
-            rdi_c = max(rdi, zero(rui))
+            rdi_c = max(rdi, zero(rdi))
             f_down(params, rui_c, rdi_c)
         end
     end

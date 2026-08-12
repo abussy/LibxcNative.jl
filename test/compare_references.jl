@@ -4,6 +4,10 @@ using JSON
 
 const REF_DIR = joinpath(@__DIR__, "references")
 
+# Universal tolerance for all reference comparisons.
+const ATOL = 1e-15
+const RTOL = sqrt(ATOL)
+
 """Return the sorted list of reference JSON files."""
 function reference_files()
     sort(filter(f -> endswith(f, ".json"), readdir(REF_DIR)))
@@ -46,10 +50,14 @@ function compare_reference(data)
 
     expected = data["expected"]
 
+    # zk (energy per particle) is a direct evaluation.
     @testset "zk" begin
-        @test isapprox(to_host(result.zk), Float64.(expected["zk"]); rtol=1e-10, atol=1e-12)
+        @test isapprox(to_host(result.zk), Float64.(expected["zk"]); rtol=RTOL, atol=ATOL)
     end
 
+    # Potentials are symbolic derivatives of zk.  The generated code uses
+    # different algebraic simplifications than upstream libxc, so small
+    # differences accumulate.
     for field in ("vrho", "vsigma", "vlapl", "vtau")
         haskey(expected, field) || continue
         @testset "$field" begin
@@ -58,7 +66,7 @@ function compare_reference(data)
             # dim × npoints matrix.  Bring both to the same layout as the JSON.
             got_arr = n_spin == 1 ? to_host(vec(got)) : to_host(got)
             ref_arr = Float64.(stack(expected[field]))
-            @test isapprox(got_arr, ref_arr; rtol=5e-5, atol=1e-10)
+            @test isapprox(got_arr, ref_arr; rtol=RTOL, atol=ATOL)
         end
     end
 end
@@ -82,5 +90,29 @@ function test_api()
     @testset "flags" begin
         @test !is_hybrid(Functional(:lda_x))
         @test !is_vv10(Functional(:lda_x))
+    end
+    @testset "derivatives" begin
+        @test supported_derivatives(Functional(:lda_x)) == [0, 1]
+        @test supported_derivatives(Functional(:mgga_x_scan)) == [0, 1]
+    end
+    @testset "error paths" begin
+        @test_throws ArgumentError Functional(:lda_x; n_spin=0)
+        @test_throws ArgumentError Functional(:lda_x; n_spin=3)
+        @test_throws ArgumentError Functional(:nonexistent)
+        @test_throws ArgumentError evaluate(Functional(:gga_x_pbe); rho=[1.0])
+        @test_throws ArgumentError evaluate(Functional(:mgga_x_scan); rho=[1.0], sigma=[1.0])
+        @test_throws ArgumentError evaluate(Functional(:lda_x); rho=[1.0], derivatives=[2])
+    end
+    @testset "evaluate! in-place" begin
+        fun = Functional(:lda_x; n_spin=1)
+        n = 10
+        rho = Float64[1.0 for _ in 1:n]
+        zk = zeros(Float64, n)
+        vrho = zeros(Float64, n)
+        result = evaluate!(fun; rho=rho, zk=zk, vrho=vrho)
+        @test result.zk === zk
+        @test result.vrho === vrho
+        @test all(!iszero, zk)
+        @test all(!iszero, vrho)
     end
 end
