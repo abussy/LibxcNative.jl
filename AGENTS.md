@@ -27,6 +27,49 @@ backend-agnostic way:
 - Avoid scalar indexing, runtime dispatch, and heap allocations inside GPU
   kernels.
 
+### Julia boxing and GPU kernel compatibility
+
+Julia boxes variables that are **conditionally assigned** within a scope (e.g.
+inside `if`/`else` branches). `Core.Box` is not isbits, so GPU compilation
+fails with "passing non-bitstype argument" if any boxed variable is captured by
+a `map!` closure.
+
+This is a **scope-level** analysis, not branch-level: if *any* variable in a
+function is conditionally assigned, *all* captured variables in that scope get
+boxed — even ones assigned unconditionally.
+
+Rules that follow from this:
+
+1. **Never assign kernel functions conditionally.** Either call `get_kernel`
+   unconditionally at the top of the scope, or split the function so each
+   branch lives in its own scope.
+
+2. **Split family wrappers by `n_spin`.** Each `evaluate_<family>!` dispatches
+   to a dedicated `_<family>_unp!` (n_spin == 1) or `_<family>_pol!`
+   (n_spin == 2) function. This isolates the different kernel sets and
+   variable names in separate scopes.
+
+3. **`get_kernel` returns `MissingKernel()` (isbits) for unimplemented kernels**
+   instead of throwing. This lets all kernel lookups be unconditional —
+   `vlapl`/`vtau` kernels that don't exist for a given functional simply
+   return a singleton that is never called (the corresponding `if out_*`
+   guard is false).
+
+4. **Do not capture `Type` objects.** A variable like `T = eltype(rho)` is a
+   `Type{Float64}`, which is not isbits. Use `zero(rui)` directly instead of
+   `zero(T)` — the element type is already available from the data.
+
+### Testing on GPU
+
+- Run with `Pkg.test("LibxcNative"; test_args=["amdgpu"])` or
+  `test_args=["cuda"]`.
+- `test/compare_references.jl` defines `to_device`/`to_host` (CPU fallbacks)
+  and `parse_input` (JSON → CPU `Array{Float64}`).
+- GPU extensions (`ext/LibxcNative*Ext.jl`) add specialized `to_device`/
+  `to_host` methods on `LibxcNative.to_device` / `LibxcNative.to_host`.
+- The test label reflects the active backend (e.g. `amdgpu vs libxc
+  references`).
+
 ## Code generation pipeline
 
 - Generation scripts live in `gen/` and consume the upstream libxc source that
