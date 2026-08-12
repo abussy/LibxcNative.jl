@@ -14,8 +14,8 @@ to_device(x) = x
 """Move an array back to the CPU from the active compute device.  CPU fallback is the identity."""
 to_host(x) = x
 
-"""Parse a reference input field and move it to the active compute device."""
-reference_input(data, field) = to_device(to_cpu(data, field))
+"""Parse a reference input field to a CPU array in the layout LibxcNative expects."""
+reference_input(data, field) = to_cpu(data, field)
 
 """Return the sorted list of reference JSON files."""
 function reference_files()
@@ -54,11 +54,15 @@ function compare_reference(data)
     n_spin = data["n_spin"]
     fun = Functional(name; n_spin=n_spin)
 
-    rho   = reference_input(data, "rho")
-    sigma = reference_input(data, "sigma")
-    lapl  = reference_input(data, "lapl")
-    tau   = reference_input(data, "tau")
+    rho   = to_device(reference_input(data, "rho"))
+    sigma = to_device(reference_input(data, "sigma"))
+    lapl  = to_device(reference_input(data, "lapl"))
+    tau   = to_device(reference_input(data, "tau"))
     result = evaluate(fun; rho=rho, sigma=sigma, lapl=lapl, tau=tau)
+
+    if isdefined(Main, :TEST_BACKEND) && Main.TEST_BACKEND != "cpu"
+        @test !(rho isa Array)
+    end
 
     expected = data["expected"]
 

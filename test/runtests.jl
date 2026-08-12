@@ -27,6 +27,8 @@ elseif backend != "cpu"
     error("Unknown test backend '$backend'. Use 'cpu', 'cuda', or 'amdgpu'.")
 end
 
+const TEST_BACKEND = backend
+
 @testset verbose=true "LibxcNative.jl ($backend)" begin
     @testset verbose=true "API compatibility" begin
         test_api()
