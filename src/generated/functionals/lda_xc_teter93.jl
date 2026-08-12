@@ -10,8 +10,6 @@
 
 module lda_xc_teter93
 
-using Base: ifelse
-
 const FAMILY = :lda
 
 const DEFAULT_PARAMS = (; dens_threshold=1e-15, zeta_threshold=1e-15)

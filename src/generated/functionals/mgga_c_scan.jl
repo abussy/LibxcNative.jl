@@ -10,8 +10,6 @@
 
 module mgga_c_scan
 
-using Base: ifelse
-
 const FAMILY = :mgga
 
 const DEFAULT_PARAMS = (; dens_threshold=1e-15, zeta_threshold=1e-15)

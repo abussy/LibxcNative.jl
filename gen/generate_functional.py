@@ -243,7 +243,6 @@ def generate(name: str) -> str:
     lines: list[str] = []
     lines.append(MPL_HEADER.format(name=name))
     lines.append(f"module {name}\n")
-    lines.append("using Base: ifelse\n")
     lines.append(f"const FAMILY = :{family}\n")
     lines.append(f"const DEFAULT_PARAMS = (; {params_tuple})\n")
 

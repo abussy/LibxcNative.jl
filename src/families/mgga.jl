@@ -2,7 +2,8 @@
 
 function evaluate_mgga!(func::Functional, params::NamedTuple, n_spin::Int,
                         rho::AbstractMatrix, sigma::AbstractMatrix,
-                        lapl::Union{AbstractMatrix,Nothing}, tau::AbstractMatrix,
+                        lapl::Union{AbstractMatrix,Nothing},
+                        tau::Union{AbstractMatrix,Nothing},
                         out_zk, out_vrho, out_vsigma, out_vlapl, out_vtau,
                         needs_lapl::Bool, needs_tau::Bool)
     n_points = size(rho, 2)

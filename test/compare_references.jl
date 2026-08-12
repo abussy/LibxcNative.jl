@@ -8,10 +8,6 @@ const REF_DIR = joinpath(@__DIR__, "references")
 # Device transfer utilities.  CPU fallbacks live here; GPU packages add methods
 # in their package extensions (ext/LibxcNative*Ext.jl).
 # ---------------------------------------------------------------------------
-"""Move an array to the CPU.  No-op if it is already a `Base.Array`."""
-to_cpu(x::AbstractArray) = Array(x)
-to_cpu(x::Array) = x
-
 """Move an array to the active compute device.  CPU fallback is the identity."""
 to_device(x) = x
 
@@ -43,7 +39,7 @@ function load_references()
     end
 end
 
-"""Convert a JSON input field to the Julia array shape expected by LibxcNative.
+"""Read a JSON input field and reshape it to the layout LibxcNative expects.
 
 For n_spin == 2 the JSON stores one vector per grid point; `stack` turns that
 into a dim × npoints matrix.  The result is always a CPU `Array{Float64}`;

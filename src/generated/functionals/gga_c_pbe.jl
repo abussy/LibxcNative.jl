@@ -10,8 +10,6 @@
 
 module gga_c_pbe
 
-using Base: ifelse
-
 const FAMILY = :gga
 
 const DEFAULT_PARAMS = (; dens_threshold=1e-12, zeta_threshold=1e-15)

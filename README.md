@@ -57,7 +57,9 @@ python gen/generate_references.py
 Run the test suite with:
 
 ```julia
-using Pkg; Pkg.test("LibxcNative")
+using Pkg; Pkg.test("LibxcNative")                 # CPU
+using Pkg; Pkg.test("LibxcNative"; test_args=["cuda"])   # NVIDIA GPU
+using Pkg; Pkg.test("LibxcNative"; test_args=["amdgpu"]) # AMD GPU
 ```
 
 ## License

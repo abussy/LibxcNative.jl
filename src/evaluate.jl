@@ -124,7 +124,7 @@ function _dim_for_field(name::Symbol, dims::SpinDimensions)
 end
 
 function _requested_outputs(func::Functional, derivatives::AbstractArray)
-    derivs = sort!(collect(derivatives))
+    derivs = sort(collect(derivatives))
     names = Symbol[]
     for d in derivs
         if d == 0
